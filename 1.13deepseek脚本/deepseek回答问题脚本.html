@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MultipleInOne Gadget_Zhèng Go-to-Sea PI_C2C Startups×PoliAI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 20px;
+            position: relative; /* 为绝对定位的图片提供参考 */
+        }
+        h1 {
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 0; /* 移除默认的上边距 */
+        }
+        .header-images {
+            position: absolute; /* 绝对定位 */
+            top: 20px; /* 距离顶部 20px */
+            right: 20px; /* 距离右侧 20px */
+            display: flex; /* 使用 Flexbox 布局 */
+            gap: 10px; /* 图片之间的间距 */
+        }
+        .header-images img {
+            width: 50px; /* 图片宽度 */
+            height: 50px; /* 图片高度 */
+            border-radius: 5px; /* 圆角 */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 阴影效果 */
+        }
+        textarea {
+            width: 100%;
+            max-width: 600px;
+            height: 150px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #answersOutput {
+            margin-top: 20px;
+        }
+        .answer {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .answer h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .answer p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        .answer p strong {
+            color: #333;
+        }
+        .answer ul, .answer ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .answer li {
+            margin-bottom: 5px;
+        }
+        .answer h4 {
+            margin: 15px 0 10px;
+            color: #007bff;
+            font-size: 16px;
+        }
+        #loading {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #007bff;
+        }
+        #timeStats {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <!-- 右上角图片 -->
+    <div class="header-images">
+        <img src="https://s2.loli.net/2025/01/13/Sdk2L3RYxaIXitH.png" alt="图片1">
+        <img src="https://s2.loli.net/2025/01/13/WvBsza3pPGou5ZL.png" alt="图片2">
+    </div>
+
+    <h1>MultipleInOne Gadget_Zhèng Go-to-Sea PI_C2C Startups×PoliAI</h1>
+    <textarea id="questionsInput" rows="10" cols="50" placeholder="请输入多个问题，每个问题占一行"></textarea>
+    <br><br>
+    <button onclick="startAsking()">开始提问</button>
+    <div id="loading"></div>
+    <div id="timeStats"></div>
+    <div id="answersOutput"></div>
+
+    <script>
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let answers = [];
+        let startTime; // 记录开始时间
+
+        const DEEPSEEK_API_KEY = 'sk-20fdce7ae9fc4dcdb442e9bb73783f68';
+        const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'; // 假设这是DeepSeek的API地址
+
+        // 向DeepSeek提问的函数
+        async function askDeepSeek(question) {
+            try {
+                const response = await fetch(DEEPSEEK_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "deepseek-chat", // 假设这是DeepSeek的模型名称
+                        messages: [{ role: "user", content: question }]
+                    })
+                });
+                const data = await response.json();
+                return data.choices[0].message.content; // 假设API返回的回答在data.choices[0].message.content中
+            } catch (error) {
+                console.error('调用DeepSeek API出错:', error);
+                return '无法获取回答，请检查API调用。';
+            }
+        }
+
+        // 格式化答案的函数
+        function formatAnswer(answer) {
+            // 将 Markdown 格式的标题（###）转换为 HTML 标题
+            answer = answer.replace(/### (.*?)\n/g, '<h4>$1</h4>');
+            // 将无序列表（-）转换为 HTML 无序列表
+            answer = answer.replace(/- (.*?)\n/g, '<li>$1</li>');
+            // 将多个换行符替换为段落标签
+            answer = answer.replace(/\n\n/g, '</p><p>');
+            // 将单个换行符替换为换行标签
+            answer = answer.replace(/\n/g, '<br>');
+            // 将列表项包裹在 <ul> 标签中
+            answer = answer.replace(/<li>(.*?)<\/li>/g, '<ul><li>$1</li></ul>');
+            return `<p>${answer}</p>`;
+        }
+
+        async function startAsking() {
+            const questionsInput = document.getElementById('questionsInput').value;
+            questions = questionsInput.split('\n').filter(q => q.trim() !== ''); // 拆分问题并过滤空行
+            currentQuestionIndex = 0;
+            answers = [];
+            document.getElementById('answersOutput').innerHTML = ''; // 清空之前的答案
+            document.getElementById('timeStats').innerHTML = ''; // 清空时间统计
+            startTime = Date.now(); // 记录开始时间
+            await askNextQuestion();
+        }
+
+        async function askNextQuestion() {
+            if (currentQuestionIndex < questions.length) {
+                const question = questions[currentQuestionIndex];
+                // 更新加载提示
+                document.getElementById('loading').innerHTML = `正在回答第 ${currentQuestionIndex + 1} 个问题（共 ${questions.length} 个）...`;
+                const answer = await askDeepSeek(question); // 向DeepSeek提问
+                answers.push({ question, answer });
+                currentQuestionIndex++;
+                await askNextQuestion(); // 继续下一个问题
+            } else {
+                const endTime = Date.now(); // 记录结束时间
+                const totalTime = (endTime - startTime) / 1000; // 计算总耗时（秒）
+                document.getElementById('loading').innerHTML = '所有问题已回答完毕！';
+                document.getElementById('timeStats').innerHTML = `总耗时：${totalTime.toFixed(2)} 秒`;
+                displayAnswers();
+            }
+        }
+
+        function displayAnswers() {
+            const answersOutput = document.getElementById('answersOutput');
+            answersOutput.innerHTML = '<h2>答案汇总:</h2>';
+            answers.forEach((item, index) => {
+                const formattedAnswer = formatAnswer(item.answer); // 格式化答案
+                answersOutput.innerHTML += `
+                    <div class="answer">
+                        <h3>问题 ${index + 1}</h3>
+                        <p><strong>问题内容:</strong> ${item.question}</p>
+                        <div><strong>DeepSeek回答:</strong> ${formattedAnswer}</div>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
